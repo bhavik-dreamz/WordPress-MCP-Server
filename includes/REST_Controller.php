@@ -70,6 +70,7 @@ class REST_Controller {
 
         $mcp_server = new MCP_Server( $auth );
 
+        print_r($body);
         try {
             $result = $mcp_server->handle_raw( $body );
             return rest_ensure_response( $result );

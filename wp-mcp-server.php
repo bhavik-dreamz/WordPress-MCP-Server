@@ -18,40 +18,45 @@ if ( file_exists( $autoload ) ) {
     require_once $autoload;
 }
 
-// PSR-4 autoloader for plugin includes
+// Plugin autoloader (handles Core/Admin PSR-style files and Tools WordPress-style files)
 spl_autoload_register( function ( $class ) {
-    $prefix = 'WP_MCP\\';
-    $base_dir = __DIR__ . '/includes/';
-    $len = strlen( $prefix );
-    if ( strncmp( $prefix, $class, $len ) !== 0 ) {
-        return;
-    }
-    $relative_class = substr( $class, $len );
-    $file = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
-    if ( file_exists( $file ) ) {
-        require_once $file;
-    }
-} );
+    $map = array(
+        'WP_MCP\\Core\\'  => __DIR__ . '/includes/',
+        'WP_MCP\\Admin\\' => __DIR__ . '/admin/',
+    );
 
-// Admin autoload
-spl_autoload_register( function ( $class ) {
-    $prefix = 'WP_MCP\\Admin\\';
-    $base_dir = __DIR__ . '/admin/';
-    $len = strlen( $prefix );
-    if ( strncmp( $prefix, $class, $len ) !== 0 ) {
+    foreach ( $map as $prefix => $dir ) {
+        $len = strlen( $prefix );
+        if ( strncmp( $class, $prefix, $len ) !== 0 ) {
+            continue;
+        }
+
+        $relative = substr( $class, $len );
+        $file = $dir . str_replace( '\\', '/', $relative ) . '.php';
+        if ( file_exists( $file ) ) {
+            require_once $file;
+        }
         return;
     }
-    $relative_class = substr( $class, $len );
-    $file = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
-    if ( file_exists( $file ) ) {
-        require_once $file;
+
+    $tools_prefix = 'WP_MCP\\Tools\\';
+    $tools_len = strlen( $tools_prefix );
+    if ( strncmp( $class, $tools_prefix, $tools_len ) === 0 ) {
+        $short = substr( $class, $tools_len );
+        $slug  = strtolower( str_replace( '_', '-', $short ) );
+        $file  = __DIR__ . '/includes/tools/class-' . $slug . '.php';
+        if ( file_exists( $file ) ) {
+            require_once $file;
+        }
     }
 } );
 
 // Initialize
 add_action( 'plugins_loaded', function () {
+      
     // Load core
     if ( class_exists( 'WP_MCP\Core\REST_Controller' ) ) {
+        
         WP_MCP\Core\REST_Controller::init();
     }
 

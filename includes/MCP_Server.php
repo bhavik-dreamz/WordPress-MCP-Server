@@ -68,7 +68,7 @@ class MCP_Server {
             case 'tools/call':
                 return $this->handle_tools_call( $data['params'] ?? array() );
             default:
-                throw new \Exception( 'Method not found' );
+                throw new \Exception( 'Method not found Tool' );
         }
     }
 

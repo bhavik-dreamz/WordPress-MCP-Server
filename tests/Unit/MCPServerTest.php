@@ -102,4 +102,11 @@ class MCPServerTest extends TestCase {
         $this->assertContains( 'search_posts', $names );
         $this->assertNotContains( 'search_pages', $names );
     }
+
+    public function test_available_tool_names_exclude_woocommerce_when_missing(): void {
+        $names = MCP_Server::get_available_tool_names();
+
+        $this->assertContains( 'search_posts', $names );
+        $this->assertNotContains( 'search_products', $names );
+    }
 }

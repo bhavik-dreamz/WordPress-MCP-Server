@@ -45,6 +45,7 @@ $all_tools = array( 'search_posts', 'search_pages', 'search_post_categories', 's
 
         <h2><?php esc_html_e( 'Authentication', 'wp-mcp-server' ); ?></h2>
         <p><?php esc_html_e( 'Generate an Application Password at: Users → Profile → Application Passwords → Add New', 'wp-mcp-server' ); ?></p>
+        <p class="description"><?php esc_html_e( 'Both Basic auth and Bearer tokens are supported. For Bearer auth, send "username:application-password" (plain or base64 encoded) as the token.', 'wp-mcp-server' ); ?></p>
         <table class="form-table">
             <tr>
                 <th><?php esc_html_e( 'Test credentials', 'wp-mcp-server' ); ?></th>

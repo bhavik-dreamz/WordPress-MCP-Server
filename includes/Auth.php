@@ -20,32 +20,71 @@ class Auth {
         }
 
         if ( stripos( $auth, 'basic ' ) === 0 ) {
-            $b64 = substr( $auth, 6 );
-            $decoded = base64_decode( $b64 );
-            if ( empty( $decoded ) ) {
-                return new \WP_Error( 'invalid_auth', __( 'Invalid Authorization header', 'wp-mcp-server' ), array( 'status' => 401 ) );
-            }
-            list( $username, $password ) = array_pad( explode( ':', $decoded, 2 ), 2, '' );
-            if ( $username === '' || $password === '' ) {
-                return new \WP_Error( 'invalid_auth', __( 'Invalid credentials', 'wp-mcp-server' ), array( 'status' => 401 ) );
-            }
+            $credentials = self::parse_basic_header( substr( $auth, 6 ) );
+        } elseif ( stripos( $auth, 'bearer ' ) === 0 ) {
+            $credentials = self::parse_bearer_header( substr( $auth, 7 ) );
+        } else {
+            return new \WP_Error( 'invalid_auth_scheme', __( 'Unsupported authorization scheme', 'wp-mcp-server' ), array( 'status' => 401 ) );
+        }
 
-            if ( ! function_exists( 'wp_authenticate_application_password' ) ) {
-                return new \WP_Error( 'no_app_passwords', __( 'Application Passwords not available on this site', 'wp-mcp-server' ), array( 'status' => 500 ) );
-            }
+        if ( is_wp_error( $credentials ) ) {
+            return $credentials;
+        }
 
-            $user = wp_authenticate_application_password( null, $username, $password );
-            if ( is_wp_error( $user ) ) {
-                return $user;
-            }
+        list( $username, $password ) = $credentials;
+        return self::authenticate_with_application_password( $username, $password );
+    }
 
-            if ( ! $user || ! $user->has_cap( 'read' ) ) {
-                return new \WP_Error( 'forbidden', __( 'Insufficient capability', 'wp-mcp-server' ), array( 'status' => 403 ) );
-            }
+    private static function parse_basic_header( $encoded ) {
+        $decoded = base64_decode( $encoded );
+        if ( $decoded === false || $decoded === '' ) {
+            return new \WP_Error( 'invalid_auth', __( 'Invalid Authorization header', 'wp-mcp-server' ), array( 'status' => 401 ) );
+        }
 
+        return self::split_credentials( $decoded );
+    }
+
+    private static function parse_bearer_header( $token ) {
+        $token = trim( $token );
+        if ( $token === '' ) {
+            return new \WP_Error( 'invalid_auth', __( 'Invalid Bearer token format', 'wp-mcp-server' ), array( 'status' => 401 ) );
+        }
+
+        if ( strpos( $token, ':' ) !== false ) {
+            return self::split_credentials( $token );
+        }
+
+        $decoded = base64_decode( $token );
+        if ( $decoded !== false && $decoded !== '' && strpos( $decoded, ':' ) !== false ) {
+            return self::split_credentials( $decoded );
+        }
+
+        return new \WP_Error( 'invalid_auth', __( 'Invalid Bearer token format', 'wp-mcp-server' ), array( 'status' => 401 ) );
+    }
+
+    private static function split_credentials( $raw ) {
+        list( $username, $password ) = array_pad( explode( ':', $raw, 2 ), 2, '' );
+        if ( $username === '' || $password === '' ) {
+            return new \WP_Error( 'invalid_auth', __( 'Invalid credentials', 'wp-mcp-server' ), array( 'status' => 401 ) );
+        }
+
+        return array( $username, $password );
+    }
+
+    private static function authenticate_with_application_password( $username, $password ) {
+        if ( ! function_exists( 'wp_authenticate_application_password' ) ) {
+            return new \WP_Error( 'no_app_passwords', __( 'Application Passwords not available on this site', 'wp-mcp-server' ), array( 'status' => 500 ) );
+        }
+
+        $user = wp_authenticate_application_password( null, $username, $password );
+        if ( is_wp_error( $user ) ) {
             return $user;
         }
 
-        return new \WP_Error( 'invalid_auth_scheme', __( 'Unsupported authorization scheme', 'wp-mcp-server' ), array( 'status' => 401 ) );
+        if ( ! $user || ! $user->has_cap( 'read' ) ) {
+            return new \WP_Error( 'forbidden', __( 'Insufficient capability', 'wp-mcp-server' ), array( 'status' => 403 ) );
+        }
+
+        return $user;
     }
 }

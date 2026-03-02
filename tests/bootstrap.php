@@ -46,12 +46,18 @@ spl_autoload_register( function ( string $class ): void {
 
         // Convert "Tool_Posts" → "tool-posts", "Admin_Page" → "admin-page"
         $short = substr( $class, $len );
-        $file  = $dir . 'class-' . strtolower( str_replace( '_', '-', $short ) ) . '.php';
+        $wp_style = $dir . 'class-' . strtolower( str_replace( '_', '-', $short ) ) . '.php';
+        $psr_style = $dir . str_replace( '\\', '/', $short ) . '.php';
 
-        if ( file_exists( $file ) ) {
-            require_once $file;
+        if ( file_exists( $wp_style ) ) {
+            require_once $wp_style;
+            return;
         }
-        return;
+
+        if ( file_exists( $psr_style ) ) {
+            require_once $psr_style;
+            return;
+        }
     }
 } );
 

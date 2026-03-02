@@ -26,7 +26,7 @@ class AuthTest extends TestCase {
 
     public function test_unsupported_scheme_returns_wp_error(): void {
         $request = new \WP_REST_Request();
-        $request->set_header( 'authorization', 'Bearer some-token' );
+        $request->set_header( 'authorization', 'Digest some-token' );
 
         $result = Auth::authenticate_request( $request );
 
@@ -126,5 +126,39 @@ class AuthTest extends TestCase {
         $result = Auth::authenticate_request( $request );
 
         $this->assertInstanceOf( \WP_Error::class, $result );
+    }
+
+    public function test_bearer_plain_credentials_return_user(): void {
+        $user = new \WP_User();
+        Functions\when( 'wp_authenticate_application_password' )->justReturn( $user );
+
+        $request = new \WP_REST_Request();
+        $request->set_header( 'authorization', 'Bearer admin:secret' );
+
+        $result = Auth::authenticate_request( $request );
+
+        $this->assertInstanceOf( \WP_User::class, $result );
+    }
+
+    public function test_bearer_base64_credentials_return_user(): void {
+        $user = new \WP_User();
+        Functions\when( 'wp_authenticate_application_password' )->justReturn( $user );
+
+        $request = new \WP_REST_Request();
+        $request->set_header( 'authorization', 'Bearer ' . base64_encode( 'admin:secret' ) );
+
+        $result = Auth::authenticate_request( $request );
+
+        $this->assertInstanceOf( \WP_User::class, $result );
+    }
+
+    public function test_bearer_invalid_token_returns_error(): void {
+        $request = new \WP_REST_Request();
+        $request->set_header( 'authorization', 'Bearer invalid' );
+
+        $result = Auth::authenticate_request( $request );
+
+        $this->assertInstanceOf( \WP_Error::class, $result );
+        $this->assertSame( 'invalid_auth', $result->get_error_code() );
     }
 }
